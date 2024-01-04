@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    <?!= include('Styles') ?>
+  </head>
+  <body>
+    <div class="block" id="info">
+      Loading...
+    </div>
+    <div id="accountWrapper" class="block form-group" style="display: none">
+      <label for="accounts">Select account:</label>
+      <select id="accounts"></select>
+    </div>
+    <div id="containerWrapper" class="block form-group" style="display: none">
+      <label for="container">Select container:</label>
+      <select id="containers" disabled></select>
+    </div>
+    <div id="versionsWrapper" class="block form-group" style="display: none">
+      <label for="versions">How many versions back?</label>
+      <select id="versions">
+      <option>1</option>
+      <option>5</option>
+      <option>10</option>
+      <option>20</option>
+      <option>50</option>
+      <option>all</option>
+      </select>
+    </div>
+    <div class="block">
+      <button class="action" id="build" disabled>Build</button>    
+      <button id="close" style="float: right">Cancel</button>
+    </div>
+    <?!= include('ContainerSelectorJavaScript'); ?>
+</body>
+</html>

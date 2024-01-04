@@ -1,0 +1,135 @@
+<script>
+  (function() {
+    var push = document.querySelector('#push');
+    var info = document.querySelector('#info');
+    var close = document.querySelector('#close');
+    var selectWorkspaces = document.querySelector('#workspaces');
+    var wsname = '';
+    var wsid = '';
+    var aid = '';
+    var cid = '';
+    var count = 0;
+    var length = 0;
+    var items = [];
+    
+    var arraySortByName = function(array) {
+      return array.sort(function(a, b) {
+        var aName = a.name.toUpperCase();
+        var bName = b.name.toUpperCase();
+        return (aName < bName) ? -1 : (aName > bName) ? 1 : 0;
+      });
+    };
+    
+    var versionCreated = function(version) {
+      
+      info.innerHTML = 'Version ' + version.containerVersionId + ' was successfully created. <a href="#" id="rebuild">Quick Rebuild</a> to see the latest release.';
+      
+      document.querySelector('#rebuild').addEventListener('click', function(e) {
+        
+        e.preventDefault();
+            
+        push.disabled = false;
+        push.innerHTML = 'Rebuilding...';
+        close.innerHTML = 'Cancel';
+        
+        google.script.run.withSuccessHandler(onDone).withFailureHandler(onError).quickRebuild();
+      });
+    };
+    
+    var updateSingle = function() {
+      
+      if (items.length) {
+      
+        count++;
+        var item = items.shift();
+        var which = items.notes ? 'notes' : 'folder';
+        
+        aid = item.accountId;
+        cid = item.containerId;
+        
+        info.innerHTML = 'Updating ' + which + ' for ' + item.type.slice(0, -1) + ' <b>' + (item.name || item.id) + '</b> (' + count + '/' + length + ').<br><br><i>* Batch update throttled to fit under the 25 hits / 100 sec. GTM API quota.</i>';
+        google.script.run.withSuccessHandler(updateSingle).withFailureHandler(onError).updateSingle(item, wsid, items);
+      } 
+      else {
+      
+        info.innerHTML = '<strong>Done updating ' + count + ' items!</strong> You can now close this modal.\
+        <br/><br/>Don\'t forget that you still need to <strong>publish</strong> / <strong>create a version from</strong> the workspace "' + wsname + '" in order to see the changes when you build the documentation again.<br/>\
+        <br/>You can also click <a href="#" id="createVersion">here</a> to create a version and publish the workspace at your own risk.';
+        close.innerHTML = 'Close';
+        push.innerHTML = 'Finished';
+        
+        push.disabled = false;
+         
+        push.addEventListener('click', onDone);
+        
+        document.querySelector('#createVersion').addEventListener('click', function(e) {
+          e.preventDefault();
+          push.innerHTML = 'Publishing...';
+          push.disabled = true;
+          close.innerHTML = 'Cancel';
+          info.innerHTML = 'Creating new published version of this workspace...';
+          google.script.run.withSuccessHandler(versionCreated).withFailureHandler(onError).createVersion(aid, cid, wsid);
+        });
+      }
+    };
+    
+    var updateItems = function(toUpdate) {
+      
+      wsid = selectWorkspaces.options[selectWorkspaces.selectedIndex].value;
+      wsname = selectWorkspaces.options[selectWorkspaces.selectedIndex].innerHTML;
+      
+      length = toUpdate.length;
+      count = 0;
+      items = toUpdate;
+      
+      if (length) {
+        updateSingle();
+      } 
+      else {      
+        onError({message: 'There were no changed folder or notes fields to update in the sheets for the selected container.'});
+      }
+    };
+    
+    var onDone = function() {
+
+       google.script.host.close();
+    }
+    
+    var onError = function(error) {
+      push.disabled = true;
+      info.innerHTML = '<span class="error">' + error.message + '</span>';
+    };
+    
+    var invalidSheet = function() {
+      info.innerHTML = 'For <strong>Push changes</strong> to work, you need to first generate the documentation using the <strong>Build documentation</strong> menu option.<br/><br/>If you have already generated the documentation, make sure you have one of these documentation sheets active in your Google Sheets before selecting the <strong>Push changes</strong> menu option.';
+    };
+    
+    var addWorkspaces = function(workspaces) {
+      info.style.display = 'block';
+      push.disabled = false;
+      workspaces = arraySortByName(workspaces);
+      workspaces.forEach(function(workspace) {
+        var option = document.createElement('option');
+        option.value = workspace.workspaceId;
+        option.innerHTML = workspace.name;
+        selectWorkspaces.appendChild(option);
+      });
+      selectWorkspaces.disabled = false;
+    };
+    
+    document.querySelector('#close').addEventListener('click', function() {
+      google.script.host.close();
+    });
+    
+    push.addEventListener('click', function() {
+      push.disabled = true;
+      push.innerText = 'Working...';
+      push.className = 'share';
+      selectWorkspaces.disabled = true;
+      google.script.run.withSuccessHandler(updateItems).withFailureHandler(onError).processChanges('push');
+    });
+    
+    google.script.run.withSuccessHandler(addWorkspaces).withFailureHandler(onError).getWorkspaces();
+
+  })();
+</script>
